@@ -1,6 +1,5 @@
 # dependencies
-/backend/node_modules
-/frontend/node_modules
+node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -9,13 +8,16 @@
 !.yarn/releases
 !.yarn/versions
 
-# next.js
-/frontend/.next/
-/out/
+# Build
+**/dist
+**/.next
+**/out
 
-# misc
-.DS_Store
-*.pem
+# DB local
+*.sqlite
+*.sqlite-journal
+*.db
+*.db-journal
 
 # debug
 npm-debug.log*
@@ -32,8 +34,6 @@ next-env.d.ts
 
 # compiled output
 backend/dist
-/node_modules
-/build
 
 # Logs
 logs
@@ -43,9 +43,6 @@ pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
-
-# OS
-.DS_Store
 
 # Tests
 /coverage
@@ -60,14 +57,17 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
-# IDE - VSCode
+# IDE / OS 
 .vscode/*
+.DS_Store
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+Thumbs.db
 
 # dotenv environment variable files
+**/.env
 .env
 .env.development.local
 .env.test.local
