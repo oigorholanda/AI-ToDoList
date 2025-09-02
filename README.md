@@ -5,9 +5,12 @@ Aplicação de listas de tarefas inteligente a *AI To-Do List* vai além do trad
 
 
 - Criar tarefas acionáveis via linguagem natural
-- Concluir tarefas específicas pelo ID
+- Concluir tarefas específicas a pedido do usuario
 - Excluir tarefas pedidas via prompt
 - Listar a quantidade de tarefas em um determinado estado
+
+<img width="1851" height="629" alt="image" src="https://github.com/user-attachments/assets/c1bbdc9d-f038-4300-85c9-27e29df7301a" />
+
 
 
 ## Tecnologias Utilizadas
