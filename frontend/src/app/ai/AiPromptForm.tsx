@@ -27,7 +27,12 @@ export default function AiPromptForm() {
                model: model || undefined,
             }),
          })
-         if (!res.ok) throw new Error('Erro na requisição')
+
+         if (!res.ok) {
+            const errorData = await res.json()
+            throw new Error(errorData.message || 'Erro desconhecido')
+         }
+
          return res.json()
       },
       onSuccess: (data) => {
@@ -40,17 +45,21 @@ export default function AiPromptForm() {
    return (
       <div className="bg-white rounded-2xl shadow">
          <p className="text-sm text-gray-500 mb-3">
-            Use prompts como: <br />
-            <i>"Crie uma lista de tarefas para organizar uma festa de aniversário"</i>
+            Exemplos de uso:
             <br />
-            <i>"Marque 'comprar o bolo' como concluida"</i>
+            <i>"Crie uma lista de tarefas para organizar uma festa"</i>
             <br />
-            <i>"Exclua as tarefas não relacionadas ao aniversário"</i>
+            <i>"Marque as 10 primeiras como concluída"</i>
             <br />
+            <i>"Reabra a tarefa 'estudar RAG'"</i>
+            <br />
+            <i>"Exclua a tarefa 'levar o lixo para fora'"</i>
+            <br />
+            <i>"Quantas tarefas eu tenho ainda não concluídas?"</i>
          </p>
 
          <textarea
-            placeholder="Descreva suas tarefas aqui..."
+            placeholder="Converse com a T.IA sobre suas tarefas..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             className="w-full border p-2 my-3 rounded"
@@ -58,7 +67,7 @@ export default function AiPromptForm() {
 
          <input
             type="text"
-            placeholder="API Key OpenRouter (opcional se cadastrada no .env)"
+            placeholder="API Key OpenRouter (opcional quando cadastrada no .env)"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             className="w-full border p-2 mb-3 rounded"
@@ -74,7 +83,7 @@ export default function AiPromptForm() {
                <option value="meta-llama/llama-4-maverick:free">LLaMa-4-Maverick</option>
                <option value="moonshotai/kimi-k2:free">Kimi-K2</option>
                <option value="qwen/qwen3-4b:free">Qwen3 (4B)</option>
-               {/* <option value="openai/gpt-oss-20b:free">GPT-oss (20B)</option> */}
+               <option value="openai/gpt-oss-20b:free">gpt-oss-20b</option>
                <option value="google/gemini-2.0-flash-exp:free">Gemini-2.0-Flash</option>
             </select>
          </div>
@@ -84,15 +93,18 @@ export default function AiPromptForm() {
             disabled={mutation.isPending}
             className="bg-blue-600 text-white px-4 py-2 rounded-xl"
          >
-            {mutation.isPending ? 'Gerando...' : 'Enviar para a T.IA'}
+            {mutation.isPending ? 'Processando...' : 'Perguntar'}
          </button>
 
          {mutation.isError && <p className="text-red-600 mt-3">Erro: {(mutation.error as Error).message}</p>}
 
          {result && (
-            <div className="mt-6 bg-gray-50 p-4 rounded-xl">
-               <h3 className="font-semibold">Resultado:</h3>
-               <pre className="whitespace-pre-wrap text-sm">{JSON.stringify(result.message, null, 2)}</pre>
+            <div className="mt-6 bg-gray-50 p-4 rounded-xl space-y-3">
+               {result.message && (
+                  <p className="text-gray-800">
+                     <strong>T.IA das tarefas:</strong> "{result.message}"
+                  </p>
+               )}
             </div>
          )}
       </div>

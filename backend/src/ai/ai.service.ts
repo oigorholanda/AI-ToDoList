@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { TasksService } from '../tasks/tasks.service';
 import { AiProvider, AiResponseShape, PromptDto, AiAction } from './dto/prompt.dto';
 
@@ -12,7 +12,10 @@ export class AiService {
         const provider: AiProvider = dto.provider ?? 'openrouter';
         const key = dto.apiKey || process.env.OPENROUTER_API_KEY;
         if (!key) {
-            throw new Error('Missing API key. Send `apiKey` in the body or configure env var.');
+            throw new HttpException(
+                'Missing API key. Send `apiKey` in the body or configure env var.',
+                HttpStatus.UNAUTHORIZED,
+            );
         }
 
 
@@ -26,14 +29,18 @@ export class AiService {
             | { "type": "LIST_PENDING" }
             | { "type": "CREATE_TASKS", "tasks": string[] }
             | { "type": "COMPLETE_TASKS", "ids": number[] }
+            | { "type": "UNCOMPLETE_TASKS", "ids": number[] }
+            | { "type": "DELETE_TASKS", "ids": number[] }
             )[];
             "message"?: string;
         }
         Rules:
-        - If user asks which tasks are pending, include LIST_PENDING.
         - If user asks to create tasks, include CREATE_TASKS with short actionable titles.
         - If user asks to complete tasks, include COMPLETE_TASKS with integer ids.
-        - Do not include text outside the JSON.`;
+        - If user asks to mark tasks as not completed, include UNCOMPLETE_TASKS.
+        - If user asks to delete tasks, include DELETE_TASKS with integer ids.
+        - Keep JSON minimal, no text outside it.
+        - IDs are integers corresponding to tasks.`;
 
 
         const user = `Current tasks (id, title, isCompleted):\n${tasks
@@ -46,18 +53,23 @@ export class AiService {
 
         // Executa ações
         const executed: { action: string; result: any }[] = [];
-
+        let humanMessage: string | undefined = parsed?.message;
 
         if (parsed?.actions?.length) {
             for (const action of parsed.actions) {
                 if (action.type === 'LIST_PENDING') {
                     const pending = await this.tasksService.findPending();
                     executed.push({ action: 'LIST_PENDING', result: pending });
+                    humanMessage =
+                        pending.length === 0
+                            ? 'Você não tem nenhuma tarefa pendente 🎉'
+                            : `Você tem ${pending.length} tarefa(s) pendente(s).`;
                 }
                 if (action.type === 'CREATE_TASKS') {
                     const titles = Array.isArray(action.tasks) ? action.tasks : [];
                     const created = await this.tasksService.createMany(titles);
                     executed.push({ action: 'CREATE_TASKS', result: created });
+                    humanMessage = `Ok! Criei ${created.length} nova(s) tarefa(s) para você.`;
                 }
                 if (action.type === 'COMPLETE_TASKS') {
                     const ids = Array.isArray(action.ids) ? action.ids : [];
@@ -71,19 +83,48 @@ export class AiService {
                         }
                     }
                     executed.push({ action: 'COMPLETE_TASKS', result: completed });
+                    humanMessage = `Prontinho! Marquei ${completed.length} tarefa(s) como concluída(s) para você.`;
+                }
+                if (action.type === 'UNCOMPLETE_TASKS') {
+                    const ids = Array.isArray(action.ids) ? action.ids : [];
+                    const uncompleted: any[] = [];
+                    for (const id of ids) {
+                        try {
+                            const t = await this.tasksService.markAsUncompleted(Number(id));
+                            uncompleted.push(t);
+                        } catch {
+                            uncompleted.push({ id, error: 'Task not found' });
+                        }
+                    }
+                    executed.push({ action: 'UNCOMPLETE_TASKS', result: uncompleted });
+                    humanMessage = `${uncompleted.length} tarefa(s) marcadas como não concluída(s).`;
+                }
+                if (action.type === 'DELETE_TASKS') {
+                    const ids = Array.isArray(action.ids) ? action.ids : [];
+                    const deleted: any[] = [];
+                    for (const id of ids) {
+                        try {
+                            await this.tasksService.remove(Number(id));
+                            deleted.push({ id, status: 'deleted' });
+                        } catch {
+                            deleted.push({ id, error: 'Task not found' });
+                        }
+                    }
+                    executed.push({ action: 'DELETE_TASKS', result: deleted });
+                    humanMessage = `Excluí ${deleted.length} tarefa(s).`;
                 }
             }
+
         }
 
 
         const updated = await this.tasksService.findAll();
 
-
         return {
-            message: parsed?.message ?? 'ok',
+            message: humanMessage ? `${humanMessage}` : 'Ok!',
             executed,
             tasks: updated,
-            raw: rawText, 
+            raw: rawText,
         };
     }
 
@@ -95,7 +136,7 @@ export class AiService {
         system: string,
         user: string,
     ): Promise<string> {
-        const m = model || 'moonshotai/kimi-k2:free';
+        const m = model || 'meta-llama/llama-4-maverick:free';
         const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -114,6 +155,33 @@ export class AiService {
             }),
         });
         const data = await resp.json();
+
+        if (data?.error) {
+            const code = data.error.code;
+            const message = data.error.message || 'Erro desconhecido no provider';
+
+            // Se for RATE LIMIT
+            if (code === 429) {
+                const resetTimestamp = data?.error?.metadata?.headers?.['X-RateLimit-Reset'];
+                let resetInfo = '';
+                if (resetTimestamp) {
+                    const resetDate = new Date(Number(resetTimestamp));
+                    resetInfo = ` Seu limite será resetado em: ${resetDate.toLocaleString()}.`;
+                }
+
+                throw new HttpException(
+                    `⚠️ Limite de uso diário atingido: ${message}.${resetInfo}`,
+                    HttpStatus.TOO_MANY_REQUESTS,
+                );
+            }
+
+            // Outros erros genéricos
+            throw new HttpException(
+                `⚠️ Erro do provider: ${message}`,
+                HttpStatus.BAD_GATEWAY,
+            );
+        }
+
         const text = data?.choices?.[0]?.message?.content ?? JSON.stringify(data);
         return String(text ?? '');
     }

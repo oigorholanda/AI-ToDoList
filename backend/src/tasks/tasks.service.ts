@@ -42,7 +42,7 @@ export class TasksService {
     return this.update(id, true);
   }
   
-  async uncompleteById(id: number): Promise<Task> {
+  async markAsUncompleted(id: number): Promise<Task> {
     return this.update(id, false);
   }
 

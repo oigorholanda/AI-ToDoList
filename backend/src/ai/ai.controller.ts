@@ -5,11 +5,11 @@ import { PromptDto } from './dto/prompt.dto';
 
 @Controller('ai')
 export class AiController {
-constructor(private readonly aiService: AiService) {}
+    constructor(private readonly aiService: AiService) { }
 
 
-@Post('prompt')
-async handlePrompt(@Body() dto: PromptDto) {
-return this.aiService.handlePrompt(dto);
-}
+    @Post('prompt')
+    async handlePrompt(@Body() dto: PromptDto) {
+        return this.aiService.handlePrompt(dto);
+    }
 }
