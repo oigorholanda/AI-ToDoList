@@ -41,6 +41,10 @@ export class TasksService {
   async completeById(id: number): Promise<Task> {
     return this.update(id, true);
   }
+  
+  async uncompleteById(id: number): Promise<Task> {
+    return this.update(id, false);
+  }
 
   async remove(id: number): Promise<void> {
     await this.taskRepository.delete(id);

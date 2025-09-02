@@ -10,7 +10,7 @@ export class AiService {
 
     async handlePrompt(dto: PromptDto) {
         const provider: AiProvider = dto.provider ?? 'openrouter';
-        const key = dto.apiKey || (provider === 'openrouter' ? process.env.OPENROUTER_API_KEY : process.env.HF_API_KEY);
+        const key = dto.apiKey || process.env.OPENROUTER_API_KEY;
         if (!key) {
             throw new Error('Missing API key. Send `apiKey` in the body or configure env var.');
         }
@@ -95,25 +95,7 @@ export class AiService {
         system: string,
         user: string,
     ): Promise<string> {
-        if (provider === 'huggingface') {
-            const m = model || 'mistralai/Mistral-7B-Instruct-v0.3';
-            const resp = await fetch(`https://api-inference.huggingface.co/models/${encodeURIComponent(m)}`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${key}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ inputs: `${system}\n\n${user}` }),
-            });
-            const data = await resp.json();
-            // HF pode retornar array/obj; tentar extrair texto
-            const text = Array.isArray(data) ? data[0]?.generated_text : data?.generated_text || JSON.stringify(data);
-            return String(text ?? '');
-        }
-
-
-        // OpenRouter (padrão)
-        const m = model || 'openrouter/auto';
+        const m = model || 'moonshotai/kimi-k2:free';
         const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
