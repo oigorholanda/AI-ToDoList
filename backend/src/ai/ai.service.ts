@@ -35,10 +35,6 @@ export class AiService {
             "message"?: string;
         }
         Rules:
-        - If user asks to create tasks, include CREATE_TASKS with short actionable titles.
-        - If user asks to complete tasks, include COMPLETE_TASKS with integer ids.
-        - If user asks to mark tasks as not completed, include UNCOMPLETE_TASKS.
-        - If user asks to delete tasks, include DELETE_TASKS with integer ids.
         - Keep JSON minimal, no text outside it.
         - IDs are integers corresponding to tasks.`;
 
@@ -56,20 +52,21 @@ export class AiService {
         let humanMessage: string | undefined = parsed?.message;
 
         if (parsed?.actions?.length) {
+            humanMessage = '';
             for (const action of parsed.actions) {
                 if (action.type === 'LIST_PENDING') {
                     const pending = await this.tasksService.findPending();
                     executed.push({ action: 'LIST_PENDING', result: pending });
-                    humanMessage =
+                    humanMessage +=
                         pending.length === 0
-                            ? 'Você não tem nenhuma tarefa pendente 🎉'
-                            : `Você tem ${pending.length} tarefa(s) pendente(s).`;
+                            ? ' Você não tem nenhuma tarefa pendente 🎉'
+                            : ` Você tem ${pending.length} tarefa(s) pendente(s).`;
                 }
                 if (action.type === 'CREATE_TASKS') {
                     const titles = Array.isArray(action.tasks) ? action.tasks : [];
                     const created = await this.tasksService.createMany(titles);
                     executed.push({ action: 'CREATE_TASKS', result: created });
-                    humanMessage = `Ok! Criei ${created.length} nova(s) tarefa(s) para você.`;
+                    humanMessage += ` Criei ${created.length} nova(s) tarefa(s) para você.`;
                 }
                 if (action.type === 'COMPLETE_TASKS') {
                     const ids = Array.isArray(action.ids) ? action.ids : [];
@@ -83,7 +80,7 @@ export class AiService {
                         }
                     }
                     executed.push({ action: 'COMPLETE_TASKS', result: completed });
-                    humanMessage = `Prontinho! Marquei ${completed.length} tarefa(s) como concluída(s) para você.`;
+                    humanMessage += ` Marquei ${completed.length} tarefa(s) como concluída(s).`;
                 }
                 if (action.type === 'UNCOMPLETE_TASKS') {
                     const ids = Array.isArray(action.ids) ? action.ids : [];
@@ -97,7 +94,7 @@ export class AiService {
                         }
                     }
                     executed.push({ action: 'UNCOMPLETE_TASKS', result: uncompleted });
-                    humanMessage = `${uncompleted.length} tarefa(s) marcadas como não concluída(s).`;
+                    humanMessage += ` ${uncompleted.length} tarefa(s) marcadas como não concluída(s).`;
                 }
                 if (action.type === 'DELETE_TASKS') {
                     const ids = Array.isArray(action.ids) ? action.ids : [];
@@ -111,7 +108,7 @@ export class AiService {
                         }
                     }
                     executed.push({ action: 'DELETE_TASKS', result: deleted });
-                    humanMessage = `Excluí ${deleted.length} tarefa(s).`;
+                    humanMessage += ` Excluí ${deleted.length} tarefa(s).`;
                 }
             }
 

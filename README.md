@@ -1,15 +1,16 @@
 # AI-ToDoList
 
 
-Aplicação de listas de tarefas inteligente a *AI To-Do List* vai além do tradicional e conta com um módulo de **IA** capaz de:
-
+Aplicação de listas de tarefas inteligente.  
+A *AI To-Do List* vai além do tradicional CRUD e conta com um módulo de **IA** capaz de:
 
 - Criar tarefas acionáveis via linguagem natural
-- Concluir tarefas específicas a pedido do usuario
-- Excluir tarefas pedidas via prompt
-- Listar a quantidade de tarefas em um determinado estado
+- Concluir tarefas específicas a pedido do usuário
+- Alternar tarefas como **concluidas** ou **não concluídas**
+- Excluir tarefas diretamente via prompt
+- Informar a quantidade de tarefas em determinado estado (ex.: pendentes)
 
-<img width="1851" height="629" alt="image" src="https://github.com/user-attachments/assets/c1bbdc9d-f038-4300-85c9-27e29df7301a" />
+<img width="100%" alt="image" src="https://github.com/user-attachments/assets/c1bbdc9d-f038-4300-85c9-27e29df7301a" />
 
 
 
@@ -40,18 +41,29 @@ npm run dev
 
 ## Endpoint de IA
 `POST /ai/prompt`
+
+Exemplo de requisição
 ```json
 {
-"prompt": "planejar uma viagem para maceió e concluir as tarefas sobre pesquisa de roteiro de férias",
+"prompt": "Lista de itens para uma viagem para maceió e conclua as tarefas sobre pesquisa de roteiro de férias",
 "provider": "openrouter",
 "apiKey": "OPCIONAL_SEM_ENV",
 "model": "openrouter/auto"
 }
 ```
-Retorna JSON com ações executadas e lista atualizada de tarefas.
 
+Exemplo de resposta
+```json
+{
+  "message": "Criei 6 nova(s) tarefa(s) para você. Marquei 2 tarefa(s) como concluída(s). ",
+  "executed": [...],
+  "tasks": [...],
+  "raw": "{...resposta original do provider...}"
+}
+```
 
 ## Observações
 - O banco é um arquivo `backend/database.sqlite`.
 - Em dev, `synchronize: true` atualiza tabelas automaticamente.
-- Para produção, use migrações.
+- Para produção, use migrações (typeorm migration:generate / run).
+- Se atingir o limite de requisições do OpenRouter, a IA retorna uma mensagem amigável com a data/hora de reset.
